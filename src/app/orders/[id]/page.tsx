@@ -1,4 +1,6 @@
-import { getOrderById } from "@/lib/dataFetch";
+"use client";
+
+import { getOrderById, CombinedOrder } from "@/lib/dataFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
@@ -6,14 +8,30 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
 import { AiAdvisorCard } from "@/components/ai/AiAdvisorCard";
-import { notFound } from "next/navigation";
+import { use, useEffect, useState } from "react";
 
-export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const order = getOrderById(id);
+export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [order, setOrder] = useState<CombinedOrder | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let found = getOrderById(id);
+    if (!found) {
+      const liveOrdersStr = localStorage.getItem('live_orders');
+      if (liveOrdersStr) {
+        const liveOrders = JSON.parse(liveOrdersStr);
+        found = liveOrders.find((o: CombinedOrder) => o.order_id === id);
+      }
+    }
+    setOrder(found || null);
+    setLoading(false);
+  }, [id]);
+
+  if (loading) return <div className="p-8 text-center text-slate-500">Loading order details...</div>;
 
   if (!order) {
-    notFound();
+    return <div className="p-8 text-center text-red-500 font-medium">Order {id} not found. If this was a simulated order, make sure Live Simulation generated it on this browser.</div>;
   }
 
   return (
@@ -56,7 +74,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     <TableRow key={idx}>
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-3">
-                          <img src={item.product?.image} alt={item.product?.name} className="w-10 h-10 rounded-md object-cover bg-slate-100" />
+                          <img src={`https://picsum.photos/seed/${item.product_id}/100/100`} alt={item.product?.name} className="w-10 h-10 rounded-md object-cover bg-slate-100" />
                           <span>{item.product?.name || item.product_id}</span>
                         </div>
                       </TableCell>

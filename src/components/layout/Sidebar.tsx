@@ -22,10 +22,10 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     <aside className="w-64 bg-[#F4F0FA] flex flex-col h-full shadow-xl lg:shadow-none">
       <div className="h-32 flex flex-col items-center justify-center px-6 pt-6">
         <Link href="/" className="flex items-center justify-center">
-          <Image src="/logo.png" alt="BMP SHOP Logo" width={140} height={80} className="object-contain drop-shadow-sm" unoptimized />
+          <Image src="/logo.png" alt="BMP SHOP Logo" width={140} height={80} className="object-contain drop-shadow-sm" priority />
         </Link>
         {onClose && (
-          <Button variant="ghost" size="icon" className="lg:hidden absolute top-4 right-4" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="lg:hidden absolute top-4 right-4" onClick={onClose} aria-label="Close Navigation Menu">
             <X size={20} />
           </Button>
         )}

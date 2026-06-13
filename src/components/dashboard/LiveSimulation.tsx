@@ -19,11 +19,11 @@ const MOCK_PRODUCTS = [
 
 export function LiveSimulation() {
   const [isActive, setIsActive] = useState(false);
-  const [toast, setToast] = useState<{message: string} | null>(null);
+  const [toast, setToast] = useState<{ message: string } | null>(null);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (isActive) {
       interval = setInterval(() => {
         // Generate random order
@@ -31,11 +31,14 @@ export function LiveSimulation() {
         const randomProduct = MOCK_PRODUCTS[Math.floor(Math.random() * MOCK_PRODUCTS.length)];
         const qty = Math.floor(Math.random() * 3) + 1;
         const total = randomProduct.price * qty;
-        
+
+        const STATUSES = ["PAID", "PENDING", "SHIPPED", "DELIVERED", "CANCELLED"];
+        const randomStatus = STATUSES[Math.floor(Math.random() * STATUSES.length)];
+
         const newOrder: CombinedOrder = {
           order_id: `live-${Math.floor(Math.random() * 10000)}`,
           user_id: "user-live",
-          status: "PAID",
+          status: randomStatus,
           timestamp: new Date().toISOString(),
           total_price: total,
           items: [{ product_id: randomProduct.id, qty, product: randomProduct as any }],
@@ -48,7 +51,7 @@ export function LiveSimulation() {
 
         // Show toast
         setToast({ message: `🎉 ออเดอร์ใหม่! ${randomName} สั่งซื้อ ${randomProduct.name} (฿${total})` });
-        
+
         setTimeout(() => setToast(null), 4000);
 
       }, 6000); // Every 6 seconds
@@ -57,15 +60,25 @@ export function LiveSimulation() {
     return () => clearInterval(interval);
   }, [isActive]);
 
+  const handleToggle = () => {
+    if (isActive) {
+      setIsActive(false);
+      localStorage.removeItem('live_orders');
+      window.dispatchEvent(new Event("clear_mock_orders"));
+    } else {
+      setIsActive(true);
+    }
+  };
+
   return (
     <>
-      <Button 
-        onClick={() => setIsActive(!isActive)}
+      <Button
+        onClick={handleToggle}
         variant="default"
         className={`shadow-sm transition-all ${isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'}`}
       >
         {isActive ? (
-          <><Square size={16} className="mr-2" /> หยุดจำลอง</>
+          <><Square size={16} className="mr-2" /> Stop</>
         ) : (
           <><Play size={16} className="mr-2" /> Live Simulation</>
         )}

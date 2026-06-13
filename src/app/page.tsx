@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getDashboardStats, getSalesByCategory, getCombinedOrders, CombinedOrder } from "@/lib/dataFetch";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { SalesChart } from "@/components/charts/SalesChart";
+import dynamic from "next/dynamic";
+
+const SalesChart = dynamic(() => import("@/components/charts/SalesChart").then(mod => mod.SalesChart), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center text-slate-400">Loading chart...</div> });
 import { Package, DollarSign, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
@@ -19,10 +21,45 @@ export default function DashboardPage() {
   );
 
   useEffect(() => {
+    // Load live orders on mount
+    const liveOrdersStr = localStorage.getItem('live_orders');
+    if (liveOrdersStr) {
+      const liveOrders = JSON.parse(liveOrdersStr);
+      
+      const baseStats = getDashboardStats();
+      let totalRev = baseStats.totalRevenue;
+      let totalOrd = baseStats.totalOrders;
+      let delRev = baseStats.deliveredRevenue;
+      
+      const baseSales = getSalesByCategory();
+      let newSalesData = [...baseSales.map(item => ({...item}))]; // Deep copy
+
+      liveOrders.forEach((o: any) => {
+        totalRev += o.total_price;
+        totalOrd += 1;
+        if (o.status === 'DELIVERED') delRev += o.total_price;
+
+        const category = o.items[0]?.product?.category || "Unknown";
+        const existing = newSalesData.find(d => d.name === category);
+        if (existing) existing.value += o.total_price;
+        else newSalesData.push({ name: category, value: o.total_price });
+      });
+
+      setStats({ ...baseStats, totalRevenue: totalRev, totalOrders: totalOrd, deliveredRevenue: delRev });
+      setSalesData(newSalesData);
+
+      const combinedOrders = [...liveOrders, ...getCombinedOrders()];
+      const unique = Array.from(new Map(combinedOrders.map(item => [item.order_id, item])).values());
+      setRecentOrders(unique.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
+    }
     const handleNewOrder = (e: Event) => {
       const customEvent = e as CustomEvent<CombinedOrder>;
       const newOrder = customEvent.detail;
       
+      // Save to localStorage
+      const liveOrders = JSON.parse(localStorage.getItem('live_orders') || '[]');
+      localStorage.setItem('live_orders', JSON.stringify([newOrder, ...liveOrders]));
+
       // Update Stats
       setStats(prev => ({
         ...prev,
@@ -51,8 +88,18 @@ export default function DashboardPage() {
       });
     };
 
+    const handleClear = () => {
+      setStats(getDashboardStats());
+      setSalesData(getSalesByCategory());
+      setRecentOrders(getCombinedOrders().sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
+    };
+
     window.addEventListener(SIMULATION_EVENT, handleNewOrder);
-    return () => window.removeEventListener(SIMULATION_EVENT, handleNewOrder);
+    window.addEventListener("clear_mock_orders", handleClear);
+    return () => {
+      window.removeEventListener(SIMULATION_EVENT, handleNewOrder);
+      window.removeEventListener("clear_mock_orders", handleClear);
+    };
   }, []);
 
   return (
