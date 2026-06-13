@@ -73,10 +73,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   {order.items.map((item, idx) => (
                     <TableRow key={idx}>
                       <TableCell className="font-medium">
-                        <div className="flex items-center space-x-3">
-                          <img src={`https://picsum.photos/seed/${item.product_id}/100/100`} alt={item.product?.name} className="w-10 h-10 rounded-md object-cover bg-slate-100" />
-                          <span>{item.product?.name || item.product_id}</span>
-                        </div>
+                        <span>{item.product?.name || item.product_id}</span>
                       </TableCell>
                       <TableCell>{item.product?.category}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.product?.price || 0)}</TableCell>
